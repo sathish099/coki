@@ -36,13 +36,3 @@ export interface ChatState {
   isLoading: boolean;
   input: string;
 }
-
-// Augment window for the AI Studio key selection
-declare global {
-  interface Window {
-    aistudio?: {
-      hasSelectedApiKey(): Promise<boolean>;
-      openSelectKey(): Promise<void>;
-    };
-  }
-}

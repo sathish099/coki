@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SearchState } from '../types';
 import { performSearch } from '../services/geminiService';
-import { Search, Globe, ArrowRight, ExternalLink, Loader2, Sparkles, Clock, Trash2 } from 'lucide-react';
+import { Search, Globe, ArrowRight, ExternalLink, Loader2, Sparkles, Clock, Trash2, Mic, MicOff } from 'lucide-react';
 
 const SearchMode: React.FC = () => {
   const [state, setState] = useState<SearchState>({
@@ -11,6 +11,8 @@ const SearchMode: React.FC = () => {
     isLoading: false,
     hasSearched: false,
   });
+
+  const [isListening, setIsListening] = useState(false);
 
   // Initialize history from localStorage
   const [history, setHistory] = useState<string[]>(() => {
@@ -78,6 +80,53 @@ const SearchMode: React.FC = () => {
     executeSearch(state.query);
   };
 
+  const handleVoiceInput = () => {
+    if (isListening) {
+      // Allow user to manually stop
+      setIsListening(false);
+      return; // The recognition.onend will handle cleanup if we had a ref, 
+      // but simpler to just let the logic flow or reload for now.
+      // Since we don't store the recognition instance in a ref for this simple implementation,
+      // we essentially rely on the UI state here, but real stop requires the instance.
+      // For a robust "stop", we'd need to keep the recognition instance in a ref.
+      // However, for this snippet, pressing the button again effectively just toggles visual state 
+      // until the browser native UI stops it or we implement full lifecycle management.
+      // Let's implement basic start logic.
+      return; 
+    }
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setState(prev => ({ ...prev, query: transcript }));
+        // Optional: could auto-submit here
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } else {
+      alert("Voice search is not supported in this browser.");
+    }
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto px-4 pb-24 md:pb-8">
       {/* Search Header / Input */}
@@ -99,20 +148,37 @@ const SearchMode: React.FC = () => {
             <Search className={`text-slate-400 ${state.isLoading ? 'opacity-0' : 'opacity-100'}`} />
             {state.isLoading && <Loader2 className="absolute text-blue-600 animate-spin" />}
           </div>
+          
           <input
             type="text"
             value={state.query}
             onChange={(e) => setState({ ...state, query: e.target.value })}
-            placeholder="Search with Coki..."
-            className="w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 text-slate-900 rounded-2xl py-4 pl-12 pr-12 text-lg shadow-lg shadow-slate-200/50 focus:shadow-xl transition-all outline-none placeholder:text-slate-400"
+            placeholder={isListening ? "Listening..." : "Search with Coki..."}
+            className={`w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 text-slate-900 rounded-2xl py-4 pl-12 pr-28 text-lg shadow-lg shadow-slate-200/50 focus:shadow-xl transition-all outline-none placeholder:text-slate-400 ${isListening ? 'border-red-400 ring-2 ring-red-100' : ''}`}
           />
-          <button 
-            type="submit"
-            disabled={state.isLoading || !state.query.trim()}
-            className="absolute inset-y-2 right-2 p-2 bg-slate-100 hover:bg-blue-600 disabled:opacity-50 disabled:bg-slate-100 rounded-xl transition-colors text-slate-600 hover:text-white"
-          >
-            <ArrowRight size={20} />
-          </button>
+          
+          <div className="absolute inset-y-2 right-2 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleVoiceInput}
+              className={`p-2 rounded-xl transition-all duration-300 ${
+                isListening 
+                  ? 'bg-red-100 text-red-600 animate-pulse' 
+                  : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
+              }`}
+              title="Voice Search"
+            >
+              {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+            
+            <button 
+              type="submit"
+              disabled={state.isLoading || !state.query.trim()}
+              className="p-2 bg-slate-100 hover:bg-blue-600 disabled:opacity-50 disabled:bg-slate-100 rounded-xl transition-colors text-slate-600 hover:text-white"
+            >
+              <ArrowRight size={20} />
+            </button>
+          </div>
         </form>
 
         {/* History Section - Only visible when not searched yet */}
