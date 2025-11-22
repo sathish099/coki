@@ -102,19 +102,31 @@ const SearchMode: React.FC = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = false; // Auto-stop after speaking for search queries
+      recognition.interimResults = true; // Enable instant feedback
       recognition.lang = 'en-US';
 
       recognitionRef.current = recognition;
+
+      // Capture current query to append to it if needed
+      const initialQuery = state.query;
 
       recognition.onstart = () => {
         setIsListening(true);
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setState(prev => ({ ...prev, query: transcript }));
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+
+        // Append to what was already there (with a space if needed), or just use transcript if empty
+        const newQuery = initialQuery 
+            ? `${initialQuery} ${transcript}`.trim()
+            : transcript;
+
+        setState(prev => ({ ...prev, query: newQuery }));
       };
 
       recognition.onerror = (event: any) => {
@@ -169,7 +181,7 @@ const SearchMode: React.FC = () => {
             value={state.query}
             onChange={(e) => setState({ ...state, query: e.target.value })}
             placeholder={isListening ? "Listening..." : "Search with Coki..."}
-            className={`w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 text-slate-900 rounded-2xl py-4 pl-12 pr-28 text-lg shadow-lg shadow-slate-200/50 focus:shadow-xl transition-all outline-none placeholder:text-slate-400 ${isListening ? 'border-red-400 ring-2 ring-red-100' : ''}`}
+            className={`w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 text-slate-900 rounded-2xl py-4 pl-12 pr-28 text-lg shadow-lg shadow-slate-200/50 focus:shadow-xl transition-all outline-none placeholder:text-slate-400 ${isListening ? 'border-red-400 ring-2 ring-red-100 bg-red-50/10' : ''}`}
           />
           
           <div className="absolute inset-y-2 right-2 flex items-center gap-1">
