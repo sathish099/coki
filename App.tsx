@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppMode } from './types';
 import Navigation from './components/Navigation';
 import SearchMode from './components/SearchMode';
@@ -7,6 +7,31 @@ import ChatMode from './components/ChatMode';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(AppMode.SEARCH);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Support Ctrl (Windows/Linux) or Meta (Mac Command)
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case '1':
+            e.preventDefault();
+            setMode(AppMode.SEARCH);
+            break;
+          case '2':
+            e.preventDefault();
+            setMode(AppMode.IMAGE);
+            break;
+          case '3':
+            e.preventDefault();
+            setMode(AppMode.CHAT);
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-200 selection:text-blue-900">

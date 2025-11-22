@@ -154,6 +154,21 @@ const SearchMode: React.FC = () => {
     }
   };
 
+  // Keyboard shortcut listener for Voice Input (Ctrl+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (!e.repeat) {
+            handleVoiceInput();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleVoiceInput]);
+
   return (
     <div className="w-full max-w-3xl mx-auto px-4 pb-24 md:pb-8">
       {/* Search Header / Input */}
@@ -193,7 +208,7 @@ const SearchMode: React.FC = () => {
                   ? 'bg-red-100 text-red-600 animate-pulse' 
                   : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
               }`}
-              title="Voice Search"
+              title="Voice Search (Ctrl+S)"
             >
               {isListening ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
