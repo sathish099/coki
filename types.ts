@@ -39,12 +39,10 @@ export interface ChatState {
 
 // Augment window for the AI Studio key selection
 declare global {
-  interface AIStudio {
-    hasSelectedApiKey(): Promise<boolean>;
-    openSelectKey(): Promise<void>;
-  }
-
   interface Window {
-    aistudio?: AIStudio;
+    aistudio?: {
+      hasSelectedApiKey(): Promise<boolean>;
+      openSelectKey(): Promise<void>;
+    };
   }
 }

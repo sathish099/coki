@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SearchState } from '../types';
 import { performSearch } from '../services/geminiService';
-import { Search, Globe, ArrowRight, ExternalLink, Loader2, Sparkles } from 'lucide-react';
+import { Search, Globe, ArrowRight, ExternalLink, Loader2, Sparkles, Clock, Trash2 } from 'lucide-react';
 
 const SearchMode: React.FC = () => {
   const [state, setState] = useState<SearchState>({
@@ -12,14 +12,51 @@ const SearchMode: React.FC = () => {
     hasSearched: false,
   });
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!state.query.trim()) return;
+  // Initialize history from localStorage
+  const [history, setHistory] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('coki_search_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to load history", e);
+      return [];
+    }
+  });
 
-    setState((prev) => ({ ...prev, isLoading: true, hasSearched: true, results: [], summary: '' }));
+  const addToHistory = (term: string) => {
+    const cleanTerm = term.trim();
+    if (!cleanTerm) return;
+
+    setHistory(prev => {
+      const newHistory = [cleanTerm, ...prev.filter(q => q !== cleanTerm)].slice(0, 8);
+      localStorage.setItem('coki_search_history', JSON.stringify(newHistory));
+      return newHistory;
+    });
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem('coki_search_history');
+  };
+
+  const executeSearch = async (queryToSearch: string) => {
+    if (!queryToSearch.trim()) return;
+
+    // Update state to show loading
+    setState((prev) => ({ 
+      ...prev, 
+      query: queryToSearch, 
+      isLoading: true, 
+      hasSearched: true, 
+      results: [], 
+      summary: '' 
+    }));
+
+    // Save to history
+    addToHistory(queryToSearch);
 
     try {
-      const { summary, links } = await performSearch(state.query);
+      const { summary, links } = await performSearch(queryToSearch);
       setState((prev) => ({
         ...prev,
         isLoading: false,
@@ -34,6 +71,11 @@ const SearchMode: React.FC = () => {
         summary: "An error occurred while searching. Please try again.",
       }));
     }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeSearch(state.query);
   };
 
   return (
@@ -52,7 +94,7 @@ const SearchMode: React.FC = () => {
           </div>
         )}
         
-        <form onSubmit={handleSearch} className="w-full relative group">
+        <form onSubmit={handleSearch} className="w-full relative group z-20">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search className={`text-slate-400 ${state.isLoading ? 'opacity-0' : 'opacity-100'}`} />
             {state.isLoading && <Loader2 className="absolute text-blue-600 animate-spin" />}
@@ -72,6 +114,33 @@ const SearchMode: React.FC = () => {
             <ArrowRight size={20} />
           </button>
         </form>
+
+        {/* History Section - Only visible when not searched yet */}
+        {!state.hasSearched && history.length > 0 && (
+          <div className="w-full mt-6 animate-fade-in px-2">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider pl-1">Recent Searches</h3>
+              <button 
+                onClick={clearHistory}
+                className="text-xs text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-red-50"
+              >
+                <Trash2 size={12} /> Clear
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {history.map((term, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => executeSearch(term)}
+                  className="group flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:shadow-sm rounded-xl text-sm text-slate-600 transition-all"
+                >
+                  <Clock size={14} className="text-slate-400 group-hover:text-blue-400" />
+                  {term}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Results Area */}
