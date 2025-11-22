@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SearchState } from '../types';
 import { performSearch } from '../services/geminiService';
 import { Search, Globe, ArrowRight, ExternalLink, Loader2, Sparkles, Clock, Trash2, Mic, MicOff } from 'lucide-react';
@@ -13,6 +13,7 @@ const SearchMode: React.FC = () => {
   });
 
   const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   // Initialize history from localStorage
   const [history, setHistory] = useState<string[]>(() => {
@@ -24,6 +25,15 @@ const SearchMode: React.FC = () => {
       return [];
     }
   });
+
+  // Cleanup recognition on unmount to prevent memory leaks or background listening
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, []);
 
   const addToHistory = (term: string) => {
     const cleanTerm = term.trim();
@@ -81,17 +91,11 @@ const SearchMode: React.FC = () => {
   };
 
   const handleVoiceInput = () => {
+    // If currently listening, stop the existing instance manually
     if (isListening) {
-      // Allow user to manually stop
-      setIsListening(false);
-      return; // The recognition.onend will handle cleanup if we had a ref, 
-      // but simpler to just let the logic flow or reload for now.
-      // Since we don't store the recognition instance in a ref for this simple implementation,
-      // we essentially rely on the UI state here, but real stop requires the instance.
-      // For a robust "stop", we'd need to keep the recognition instance in a ref.
-      // However, for this snippet, pressing the button again effectively just toggles visual state 
-      // until the browser native UI stops it or we implement full lifecycle management.
-      // Let's implement basic start logic.
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       return; 
     }
 
@@ -102,6 +106,8 @@ const SearchMode: React.FC = () => {
       recognition.interimResults = false;
       recognition.lang = 'en-US';
 
+      recognitionRef.current = recognition;
+
       recognition.onstart = () => {
         setIsListening(true);
       };
@@ -109,19 +115,28 @@ const SearchMode: React.FC = () => {
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         setState(prev => ({ ...prev, query: transcript }));
-        // Optional: could auto-submit here
       };
 
       recognition.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
+        // 'aborted' happens when we stop manually, so we ignore it to prevent error noise
+        if (event.error !== 'aborted') {
+            console.error('Speech recognition error', event.error);
+        }
         setIsListening(false);
+        recognitionRef.current = null;
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        recognitionRef.current = null;
       };
 
-      recognition.start();
+      try {
+        recognition.start();
+      } catch (e) {
+        console.error("Failed to start recognition", e);
+        setIsListening(false);
+      }
     } else {
       alert("Voice search is not supported in this browser.");
     }
