@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -32,7 +33,14 @@ func extractText(n *html.Node) string {
 }
 
 func main() {
-	resp, err := http.Get("https://example.com")
+	// Check if a URL was provided on the command line
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <URL>\n", os.Args[0])
+		os.Exit(1)
+	}
+	url := os.Args[1]
+
+	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println("Error fetching URL:", err)
 		return
