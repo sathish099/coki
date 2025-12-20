@@ -95,7 +95,7 @@ export const streamChat = async (
   }));
 
   const chat: Chat = ai.chats.create({
-    model: 'gemini-3-pro-preview',
+    model: 'gemma-3-27b-it',
     history: historyContents,
   });
 
