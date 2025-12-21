@@ -42,9 +42,27 @@ Enhance your workflow with these global shortcuts:
 
 ## Configuration
 
-This application uses the Google GenAI SDK. It requires a valid API Key available via `process.env.API_KEY`.
+This application uses a secure backend proxy to handle all AI service calls. The backend requires the following environment variables to be set:
 
-For **Image Generation**, the application utilizes `window.aistudio` utilities to ensure the user selects a billed Google Cloud Project key, as `gemini-3-pro-image-preview` features may incur costs.
+-   `GEMINI_API_KEY`: Your Google GenAI API key.
+-   `OPENROUTER_API_KEY`: Your OpenRouter API key.
+
+To run the application, you must start both the frontend and backend servers.
+
+### Frontend
+
+```bash
+npm install
+npm run dev
+```
+
+### Backend
+
+```bash
+cd backend
+npm install
+node server.js
+```
 
 ## Browser Support
 

@@ -82,34 +82,31 @@ export const streamChat = async (
   newMessage: string,
   onChunk: (text: string) => void
 ): Promise<void> => {
-  const ai = getAI();
-  
-  // Convert history to format expected by SDK if necessary, 
-  // but for simple text chats, we can construct the history or use ai.chats.create
-  // Here we will use a persistent chat session strategy if we were keeping the object alive,
-  // but for a stateless functional service, we recreate the history context.
-  
-  const historyContents = history.map(msg => ({
-    role: msg.role,
-    parts: [{ text: msg.text }]
-  }));
-
-  const chat: Chat = ai.chats.create({
-    model: 'gemma-3-27b-it',
-    history: historyContents,
-  });
-
   try {
-    const responseStream = await chat.sendMessageStream({ message: newMessage });
-    
-    for await (const chunk of responseStream) {
-        const c = chunk as GenerateContentResponse;
-        if (c.text) {
-            onChunk(c.text);
-        }
+    const response = await fetch('http://localhost:3001/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ history, newMessage }),
+    });
+
+    if (!response.body) {
+      throw new Error("No response body");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      onChunk(decoder.decode(value));
     }
   } catch (error) {
-    console.error("Chat Error:", error);
+    console.error("Error streaming chat:", error);
     throw error;
   }
 };
