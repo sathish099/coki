@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatState, ChatMessage } from '../types';
-import { streamChat } from '../services/geminiService';
-import { Send, User, Bot, Sparkles, StopCircle } from 'lucide-react';
+import { streamChat as streamChatGemini } from '../services/geminiService';
+import { streamChat as streamChatGemma } from '../services/gemmaService';
+import { Send, User, Bot, Sparkles, StopCircle, ChevronDown } from 'lucide-react';
+
+type Model = 'gemini' | 'gemma';
 
 const ChatMode: React.FC = () => {
   const [state, setState] = useState<ChatState>({
@@ -9,6 +12,7 @@ const ChatMode: React.FC = () => {
     isLoading: false,
     input: '',
   });
+  const [selectedModel, setSelectedModel] = useState<Model>('gemini');
   
   // Use ref to keep track of current message being built during streaming
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -40,6 +44,8 @@ const ChatMode: React.FC = () => {
       // Create a local variable to accumulate the stream text
       let fullText = '';
       
+      const streamChat = selectedModel === 'gemini' ? streamChatGemini : streamChatGemma;
+
       await streamChat(
         [...state.messages, userMsg], // Current history excluding the empty bot placeholder
         userMsg.text,
@@ -78,6 +84,17 @@ const ChatMode: React.FC = () => {
                 <h2 className="font-bold text-slate-900">Coki Chat</h2>
                 <p className="text-xs text-slate-500">Advanced reasoning & coding capable</p>
             </div>
+        </div>
+        <div className="relative">
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value as Model)}
+            className="bg-slate-100 border border-slate-200 rounded-md px-3 py-1 text-sm font-medium text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none pr-8"
+          >
+            <option value="gemini">Gemini</option>
+            <option value="gemma">Gemma</option>
+          </select>
+          <ChevronDown size={16} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
         </div>
       </div>
 
